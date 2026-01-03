@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text to Image Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #2d2d2d;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 { margin-bottom: 1.5rem; font-size: 1.8rem; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #404040;
+            color: white;
+            box-sizing: border-box; /* Agar padding tidak merusak width */
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #6366f1;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #4f46e5; }
+        button:disabled { background-color: #444; cursor: not-allowed; }
+        
+        .result-area {
+            margin-top: 20px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #444;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        img { max-width: 100%; height: auto; display: block; }
+        .loading { display: none; color: #aaa; }
+        .error { color: #ff6b6b; margin-top: 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>✨ AI Image Generator</h1>
+        <input type="text" id="promptInput" placeholder="Contoh: A futuristic cyberpunk city, neon lights..." />
+        <button id="generateBtn" onclick="generateImage()">Buat Gambar</button>
+        
+        <div class="result-area" id="resultArea">
+            <span style="color: #666;">Gambar akan muncul di sini</span>
+        </div>
+        <p class="error" id="errorMsg"></p>
+    </div>
+
+    <script>
+        async function generateImage() {
+            const prompt = document.getElementById('promptInput').value;
+            const btn = document.getElementById('generateBtn');
+            const resultArea = document.getElementById('resultArea');
+            const errorMsg = document.getElementById('errorMsg');
+
+            if (!prompt) {
+                errorMsg.textContent = "Harap masukkan teks prompt!";
+                return;
+            }
+
+            // Reset UI State
+            errorMsg.textContent = "";
+            btn.disabled = true;
+            btn.textContent = "Sedang Membuat...";
+            resultArea.innerHTML = '<span class="loading" style="display:block">Sedang memproses... (bisa memakan waktu 10-30 detik)</span>';
+
+            try {
+                // Panggil Backend API kita sendiri
+                const response = await fetch(`/api/generate?prompt=${encodeURIComponent(prompt)}`);
+                const data = await response.json();
+
+                console.log("Full Response:", data); // Untuk debugging di console browser
+
+                // CATATAN PENTING:
+                // Struktur respons API exsalapi mungkin berbeda-beda.
+                // Biasanya URL gambar ada di properti 'url', 'result', atau 'image'.
+                // Kode di bawah mencoba mencari properti tersebut.
+                
+                let imageUrl = null;
+                if (data.url) imageUrl = data.url;
+                else if (data.result) imageUrl = data.result;
+                else if (data.image) imageUrl = data.image;
+                else if (typeof data === 'string' && data.startsWith('http')) imageUrl = data;
+
+                if (imageUrl) {
+                    resultArea.innerHTML = `<img src="${imageUrl}" alt="AI Generated Image" />`;
+                } else {
+                    resultArea.innerHTML = `<span style="color: #ff6b6b;">Gagal memuat gambar. Cek console.</span>`;
+                    errorMsg.textContent = "Format respon API tidak dikenali atau kuota habis.";
+                }
+
+            } catch (err) {
+                console.error(err);
+                resultArea.innerHTML = '<span style="color: #ff6b6b;">Error</span>';
+                errorMsg.textContent = "Terjadi kesalahan koneksi.";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Buat Gambar";
+            }
+        }
+    </script>
+</body>
+</html>
